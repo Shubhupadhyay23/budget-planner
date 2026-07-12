@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -12,15 +11,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Plus, Wallet, TrendingUp, PiggyBank, RefreshCcw, Landmark, ListTodo, 
-  Download, Sparkles, LogOut, Mic, MicOff, Languages, Check, HelpCircle
+  LogOut, Mic, MicOff, Languages, Check
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { addExpense } from '@/app/actions';
 import { createClient } from '@/utils/supabase/client';
 import { 
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend
 } from 'recharts';
 
 import { FamilyData } from './BudgetApp';
@@ -46,6 +43,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 const translations = {
   en: {
     title: "Family Budget",
+    cycle: "Cycle",
+    day: "Day",
+    of: "of",
     remaining: "Pocket Money Left",
     spent: "Spent",
     totalBudget: "Total Budget",
@@ -70,6 +70,9 @@ const translations = {
   },
   hi: {
     title: "पारिवारिक बजट",
+    cycle: "चक्र",
+    day: "दिन",
+    of: "का",
     remaining: "बचे हुए पैसे",
     spent: "खर्च किया",
     totalBudget: "कुल बजट",
@@ -94,6 +97,9 @@ const translations = {
   },
   gu: {
     title: "કૌટુંબિક બજેટ",
+    cycle: "ચક્ર",
+    day: "દિવસ",
+    of: "નું",
     remaining: "બાકી રહેલા પૈસા",
     spent: "વાપરેલા પૈસા",
     totalBudget: "કુલ બજેટ",
@@ -144,7 +150,8 @@ interface WindowWithSpeech {
 }
 
 export default function Dashboard({ initialData }: DashboardProps) {
-  const { profile, members, budget, expenses, logs } = initialData;
+  const { profile, members, expenses, logs } = initialData;
+  const budget = initialData.budget!;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -319,7 +326,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={lang} onValueChange={(v: any) => setLang(v)}>
+            <Select value={lang} onValueChange={(v) => { if (v) setLang(v); }}>
               <SelectTrigger className="w-[75px] h-8 bg-zinc-50 dark:bg-zinc-800 border-none rounded-xl text-xs font-bold">
                 <Languages className="w-3.5 h-3.5 mr-1" />
                 <SelectValue />
@@ -564,7 +571,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
                 
                 <div className="space-y-2">
                   <Label htmlFor="paidBy" className="text-xs font-bold text-zinc-500 uppercase">{t('paidBy')}</Label>
-                  <Select value={paidBy} onValueChange={setPaidBy}>
+                  <Select value={paidBy} onValueChange={(v) => { if (v) setPaidBy(v); }}>
                     <SelectTrigger className="h-12 rounded-2xl text-sm font-semibold">
                       <SelectValue />
                     </SelectTrigger>

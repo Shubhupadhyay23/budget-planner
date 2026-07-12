@@ -2,7 +2,6 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 
 export async function getFamilyData() {
   const supabase = await createClient()
@@ -187,7 +186,7 @@ export async function addExpense(payload: {
 
   if (!profile) throw new Error('Profile not found')
 
-  const { data: expense, error } = await supabase
+  const { error } = await supabase
     .from('expenses')
     .insert({
       family_id: profile.family_id,
@@ -201,8 +200,6 @@ export async function addExpense(payload: {
       is_extra_expense: payload.is_extra_expense,
       created_by: user.id
     })
-    .select()
-    .single()
 
   if (error) throw new Error('Failed to add expense: ' + error.message)
 

@@ -135,7 +135,7 @@ export default function BudgetApp({ initialData }: BudgetAppProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [data?.family?.id])
+  }, [data?.family?.id, supabase])
 
   const handleOnboardingComplete = async () => {
     const freshData = await getFamilyData()

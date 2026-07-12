@@ -85,7 +85,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 <div className="space-y-2">
                   <Label>Monthly Income / Budget</Label>
                   <div className="flex gap-2">
-                    <Select value={currency} onValueChange={setCurrency}>
+                    <Select value={currency} onValueChange={(v) => { if (v) setCurrency(v); }}>
                       <SelectTrigger className="w-[80px]">
                         <SelectValue />
                       </SelectTrigger>
@@ -109,7 +109,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Month</Label>
-                    <Select value={month.toString()} onValueChange={(v) => setMonth(parseInt(v))}>
+                    <Select value={month.toString()} onValueChange={(v) => { if (v) setMonth(parseInt(v)); }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -124,7 +124,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   </div>
                   <div className="space-y-2">
                     <Label>Year</Label>
-                    <Select value={year.toString()} onValueChange={(v) => setYear(parseInt(v))}>
+                    <Select value={year.toString()} onValueChange={(v) => { if (v) setYear(parseInt(v)); }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
