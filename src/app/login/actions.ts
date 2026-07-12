@@ -23,7 +23,11 @@ export async function login(formData: FormData) {
     })
 
     if (signUpError) {
-      redirect('/login?error=' + encodeURIComponent(signUpError.message))
+      let friendlyMessage = signUpError.message;
+      if (signUpError.message.toLowerCase().includes('rate limit')) {
+        friendlyMessage = 'Rate limit exceeded! Please wait 60 seconds, or disable "Confirm Email" & increase rate limits in your Supabase Auth Settings to bypass this.';
+      }
+      redirect('/login?error=' + encodeURIComponent(friendlyMessage))
     }
 
     // If email confirmation is enabled on this project, we must display the check email message
