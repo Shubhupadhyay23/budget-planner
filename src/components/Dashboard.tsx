@@ -23,16 +23,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 
+import { FamilyData } from './BudgetApp';
+
 interface DashboardProps {
-  initialData: {
-    user: any
-    profile: any
-    family: any
-    members: any[]
-    budget: any
-    expenses: any[]
-    logs: any[]
-  }
+  initialData: FamilyData
 }
 
 const COLORS = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#5AC8FA', '#FFCC00', '#8E8E93'];
@@ -124,8 +118,33 @@ const translations = {
   }
 };
 
+interface SpeechRecognitionEvent {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string
+      }
+    }
+  }
+}
+
+interface SpeechRecognitionInstance {
+  lang: string
+  interimResults: boolean
+  maxAlternatives: number
+  start: () => void
+  onresult: (event: SpeechRecognitionEvent) => void
+  onerror: () => void
+  onend: () => void
+}
+
+interface WindowWithSpeech {
+  SpeechRecognition?: new () => SpeechRecognitionInstance
+  webkitSpeechRecognition?: new () => SpeechRecognitionInstance
+}
+
 export default function Dashboard({ initialData }: DashboardProps) {
-  const { user, profile, family, members, budget, expenses, logs } = initialData;
+  const { profile, members, budget, expenses, logs } = initialData;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -137,7 +156,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Food');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date] = useState(new Date().toISOString().split('T')[0]);
   const [paidBy, setPaidBy] = useState(profile?.id || '');
   const [selectedSplitMembers, setSelectedSplitMembers] = useState<string[]>(members.map(m => m.id));
   const [isExtraExpense, setIsExtraExpense] = useState(false);
@@ -157,7 +176,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
   // Voice Speech Parsing
   const handleVoiceEntry = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as WindowWithSpeech).SpeechRecognition || (window as unknown as WindowWithSpeech).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Voice input is not supported in this browser. Please use Google Chrome or Safari.");
       return;
@@ -171,7 +190,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
     setListening(true);
     recognition.start();
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript.toLowerCase();
       parseVoiceInput(transcript);
       setListening(false);

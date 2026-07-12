@@ -6,12 +6,82 @@ import Onboarding from './Onboarding'
 import Dashboard from './Dashboard'
 import { getFamilyData } from '@/app/actions'
 
+export interface Profile {
+  id: string
+  user_id: string
+  family_id: string
+  name: string
+  role: 'admin' | 'member'
+  created_at: string
+}
+
+export interface Family {
+  id: string
+  name: string
+  admin_id: string
+  created_at: string
+}
+
+export interface Budget {
+  id: string
+  family_id: string
+  month: number
+  year: number
+  income: number
+  currency: string
+  cycle_1_budget: number
+  cycle_2_budget: number
+  cycle_3_budget: number
+  created_at: string
+}
+
+export interface Expense {
+  id: string
+  family_id: string
+  amount: number
+  category: string
+  description: string
+  date: string
+  paid_by: string
+  split_members: string[]
+  cycle: number
+  is_extra_expense: boolean
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ActivityLog {
+  id: string
+  family_id: string
+  user_id: string
+  action: string
+  details: {
+    amount?: number
+    category?: string
+    paid_by_name?: string
+    income?: number
+    currency?: string
+  }
+  created_at: string
+}
+
+export interface FamilyData {
+  user: { id: string; email?: string }
+  profile: Profile
+  family: Family
+  members: Profile[]
+  budget: Budget | null
+  expenses: Expense[]
+  logs: ActivityLog[]
+}
+
 interface BudgetAppProps {
-  initialData: any
+  initialData: FamilyData | null
 }
 
 export default function BudgetApp({ initialData }: BudgetAppProps) {
-  const [data, setData] = useState(initialData)
+  const [data, setData] = useState<FamilyData | null>(initialData)
   const supabase = createClient()
   useEffect(() => {
     if ('serviceWorker' in navigator) {

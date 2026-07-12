@@ -76,7 +76,7 @@ export const useAppStore = create<AppState>()(
           const splitAmount = expense.amount / expense.splitMembers.length;
           
           newMembers = newMembers.map(m => {
-            let updated = { ...m };
+            const updated = { ...m };
             if (m.id === expense.paidBy) {
               updated.paid += expense.amount;
             }
