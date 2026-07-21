@@ -77,7 +77,8 @@ const translations = {
     monthlySpent: "Spent this Month",
     monthlyIncome: "Monthly Income",
     monthlyTransactions: "Month's Spendings 📅",
-    noMonthlyTransactions: "No spendings recorded this month!"
+    noMonthlyTransactions: "No spendings recorded this month!",
+    exportCSV: "Export CSV"
   },
   hi: {
     title: "पारिवारिक बजट",
@@ -115,7 +116,8 @@ const translations = {
     monthlySpent: "इस महीने का खर्च",
     monthlyIncome: "मासिक आय",
     monthlyTransactions: "महीने के खर्चे 📅",
-    noMonthlyTransactions: "इस महीने कोई खर्च दर्ज नहीं किया गया!"
+    noMonthlyTransactions: "इस महीने कोई खर्च दर्ज नहीं किया गया!",
+    exportCSV: "निर्यात CSV"
   },
   gu: {
     title: "કૌટુંબિક બજેટ",
@@ -153,7 +155,8 @@ const translations = {
     monthlySpent: "આ મહિનાનો ખર્ચ",
     monthlyIncome: "માસિક આવક",
     monthlyTransactions: "મહિનાના ખર્ચાઓ 📅",
-    noMonthlyTransactions: "આ મહિને કોઈ ખર્ચ નોંધાયેલ નથી!"
+    noMonthlyTransactions: "આ મહિને કોઈ ખર્ચ નોંધાયેલ નથી!",
+    exportCSV: "નિકાસ CSV"
   }
 };
 
@@ -233,6 +236,62 @@ export default function Dashboard({ initialData }: DashboardProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["Date", "Category", "Description", "Amount", "Paid By", "Split Members", "Type"];
+    
+    const rows = monthlyExpenses.map(expense => {
+      const payer = members.find(m => m.id === expense.paid_by);
+      const payerName = payer ? payer.name : 'Unknown';
+      const splitNames = expense.split_members
+        .map(id => members.find(m => m.id === id)?.name || 'Unknown')
+        .join(', ');
+      
+      const category = expense.category;
+      const description = expense.description || category;
+      const amount = expense.amount.toString();
+      const date = expense.date;
+      const type = expense.is_extra_expense ? "Extra" : "Regular";
+      
+      const cleanField = (field: string) => {
+        const escaped = field.replace(/"/g, '""');
+        return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')
+          ? `"${escaped}"`
+          : escaped;
+      };
+
+      return [
+        cleanField(date),
+        cleanField(category),
+        cleanField(description),
+        cleanField(amount),
+        cleanField(payerName),
+        cleanField(splitNames),
+        cleanField(type)
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const monthStr = (budget.month < 10 ? '0' : '') + budget.month;
+    const filename = `family_budget_transactions_${budget.year}_${monthStr}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
@@ -562,8 +621,16 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
             {/* Monthly Transactions List */}
             <Card className="border-none shadow-sm bg-white dark:bg-zinc-900 rounded-3xl p-4">
-              <CardHeader className="p-0 pb-3">
+              <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-base font-bold flex items-center gap-2">📅 {t('monthlyTransactions')}</CardTitle>
+                <Button 
+                  onClick={handleExportCSV} 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 rounded-xl text-[10px] font-extrabold gap-1 px-2.5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:text-zinc-900"
+                >
+                  📥 {t('exportCSV')}
+                </Button>
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[280px] pr-2">

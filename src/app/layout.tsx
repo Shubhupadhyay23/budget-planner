@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "Family Budget Planner",
   description: "A beautiful collaborative family budget planner app.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Family Budget",
+  },
 };
 
 export const viewport = {
@@ -33,6 +38,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
