@@ -66,7 +66,12 @@ const translations = {
     date: "When? 📅",
     saveExpense: "Save to Piggybank 🐷",
     markExtra: "This is a special surprise expense (Skip normal budget)",
-    voicePlaceholder: "Tap Mic and say: 'spent 500 on Food'"
+    voicePlaceholder: "Tap Mic and say: 'spent 500 on Food'",
+    monthlySavings: "Monthly Savings",
+    monthlySpent: "Spent this Month",
+    monthlyIncome: "Monthly Income",
+    monthlyTransactions: "Month's Spendings 📅",
+    noMonthlyTransactions: "No spendings recorded this month!"
   },
   hi: {
     title: "पारिवारिक बजट",
@@ -93,7 +98,12 @@ const translations = {
     date: "कब? 📅",
     saveExpense: "गुल्लक में डालें 🐷",
     markExtra: "यह एक विशेष अतिरिक्त खर्च है (बजट न घटाएं)",
-    voicePlaceholder: "माइक दबाकर बोलें: 'भोजन पर 500 रुपये'"
+    voicePlaceholder: "माइक दबाकर बोलें: 'भोजन पर 500 रुपये'",
+    monthlySavings: "मासिक बचत",
+    monthlySpent: "इस महीने का खर्च",
+    monthlyIncome: "मासिक आय",
+    monthlyTransactions: "महीने के खर्चे 📅",
+    noMonthlyTransactions: "इस महीने कोई खर्च दर्ज नहीं किया गया!"
   },
   gu: {
     title: "કૌટુંબિક બજેટ",
@@ -120,7 +130,12 @@ const translations = {
     date: "ક્યારે? 📅",
     saveExpense: "ગલ્લાકમાં સાચવો 🐷",
     markExtra: "આ એક વિશેષ વધારાનો ખર્ચ છે",
-    voicePlaceholder: "માઈક દબાવીને બોલો: 'ભોજન પર 500 રૂપિયા'"
+    voicePlaceholder: "માઈક દબાવીને બોલો: 'ભોજન પર 500 રૂપિયા'",
+    monthlySavings: "માસિક બચત",
+    monthlySpent: "આ મહિનાનો ખર્ચ",
+    monthlyIncome: "માસિક આવક",
+    monthlyTransactions: "મહિનાના ખર્ચાઓ 📅",
+    noMonthlyTransactions: "આ મહિને કોઈ ખર્ચ નોંધાયેલ નથી!"
   }
 };
 
@@ -258,6 +273,35 @@ export default function Dashboard({ initialData }: DashboardProps) {
     .filter(e => e.is_extra_expense)
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
+  // Monthly calculations
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const monthlyExpenses = expenses.filter(e => {
+    const parts = e.date.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      return month === (budget.month || currentMonth) && year === (budget.year || currentYear);
+    }
+    return false;
+  });
+
+  const monthlySpent = monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const monthlySavings = Number(budget.income) - monthlySpent;
+  const monthlyPercentage = Math.min((monthlySpent / Number(budget.income)) * 100, 100);
+
+  const formatExpenseDate = (dateStr: string) => {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const tempDate = new Date(Number(year), monthIndex, day);
+      return tempDate.toLocaleDateString(lang === 'hi' ? 'hi-IN' : lang === 'gu' ? 'gu-IN' : 'en-US', { day: 'numeric', month: 'short' });
+    }
+    return dateStr;
+  };
+
   // Split calculations
   const ledger = members.map(m => {
     let totalPaid = 0;
@@ -346,8 +390,9 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
         {/* Tab Selection: Rounded, Chunky pill layout */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid grid-cols-4 bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-2xl h-12">
+          <TabsList className="grid grid-cols-5 bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-2xl h-12">
             <TabsTrigger value="overview" className="rounded-xl text-xs font-bold py-2">🏠</TabsTrigger>
+            <TabsTrigger value="monthly" className="rounded-xl text-xs font-bold py-2">📅</TabsTrigger>
             <TabsTrigger value="analytics" className="rounded-xl text-xs font-bold py-2">📊</TabsTrigger>
             <TabsTrigger value="ledger" className="rounded-xl text-xs font-bold py-2">🤝</TabsTrigger>
             <TabsTrigger value="history" className="rounded-xl text-xs font-bold py-2">📜</TabsTrigger>
@@ -411,6 +456,93 @@ export default function Dashboard({ initialData }: DashboardProps) {
                               </div>
                             </div>
                             <span className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">{budget.currency}{expense.amount}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* MONTHLY SUMMARY TAB */}
+          <TabsContent value="monthly" className="space-y-4 outline-none">
+            {/* Monthly Savings Display Card */}
+            <Card className="bg-gradient-to-br from-indigo-600 to-indigo-500 text-white border-none shadow-xl rounded-3xl p-6 relative overflow-hidden">
+              <div className="absolute -right-4 -top-4 text-9xl opacity-10 select-none">🐷</div>
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-100">{t('monthlySavings')}</span>
+              <h2 className="text-4xl font-extrabold mt-1 tracking-tight">
+                {budget.currency}{monthlySavings.toLocaleString()}
+              </h2>
+              
+              <div className="space-y-2 mt-6">
+                <div className="flex justify-between text-xs font-bold text-indigo-100">
+                  <span>{t('monthlySpent')}: {budget.currency}{monthlySpent.toLocaleString()}</span>
+                  <span>{t('monthlyIncome')}: {budget.currency}{Number(budget.income).toLocaleString()}</span>
+                </div>
+                <Progress value={monthlyPercentage} className="h-3 bg-white/20 rounded-full" />
+              </div>
+            </Card>
+
+            {/* Micro Widgets */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="border-none shadow-sm bg-white dark:bg-zinc-900 p-4 rounded-2xl flex flex-col items-center text-center">
+                <span className="text-2xl mb-1">💰</span>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase">{t('monthlyIncome')}</span>
+                <span className="text-lg font-extrabold mt-0.5 text-zinc-900 dark:text-zinc-100">
+                  {budget.currency}{Number(budget.income).toLocaleString()}
+                </span>
+              </Card>
+
+              <Card className="border-none shadow-sm bg-white dark:bg-zinc-900 p-4 rounded-2xl flex flex-col items-center text-center">
+                <span className="text-2xl mb-1">💸</span>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase">{t('monthlySpent')}</span>
+                <span className="text-lg font-extrabold mt-0.5 text-zinc-900 dark:text-zinc-100">
+                  {budget.currency}{monthlySpent.toLocaleString()}
+                </span>
+              </Card>
+            </div>
+
+            {/* Monthly Transactions List */}
+            <Card className="border-none shadow-sm bg-white dark:bg-zinc-900 rounded-3xl p-4">
+              <CardHeader className="p-0 pb-3">
+                <CardTitle className="text-base font-bold flex items-center gap-2">📅 {t('monthlyTransactions')}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[280px] pr-2">
+                  <div className="space-y-3">
+                    {monthlyExpenses.length === 0 ? (
+                      <p className="text-zinc-400 text-center text-sm py-8 font-semibold">{t('noMonthlyTransactions')}</p>
+                    ) : (
+                      monthlyExpenses.map((expense) => {
+                        const payer = members.find(m => m.id === expense.paid_by);
+                        const emoji = CATEGORY_ICONS[expense.category] || '✨';
+                        return (
+                          <div key={expense.id} className="flex justify-between items-center p-2.5 bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <span className="text-2xl">{emoji}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{expense.description || expense.category}</p>
+                                <p className="text-[10px] text-zinc-400 font-bold">
+                                  {t('paidBy')} {payer?.name} • {expense.split_members.length} {t('members')}
+                                </p>
+                                <div className="flex gap-1.5 mt-1 flex-wrap">
+                                  <span className="text-[9px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-1.5 py-0.5 rounded-md">
+                                    {t('cycle')} {expense.cycle}
+                                  </span>
+                                  {expense.is_extra_expense && (
+                                    <span className="text-[9px] bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-400 font-bold px-1.5 py-0.5 rounded-md">
+                                      🎁 Extra
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end justify-between self-stretch gap-2 pl-2 shrink-0">
+                              <span className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">{budget.currency}{expense.amount}</span>
+                              <span className="text-[9px] font-bold text-zinc-400">{formatExpenseDate(expense.date)}</span>
+                            </div>
                           </div>
                         );
                       })
