@@ -79,6 +79,9 @@ export async function setupFamilyBudget(payload: {
   month: number
   year: number
   members: string[]
+  cycle_1_budget?: number
+  cycle_2_budget?: number
+  cycle_3_budget?: number
 }) {
   const supabase = await createClient()
 
@@ -132,7 +135,9 @@ export async function setupFamilyBudget(payload: {
   }
 
   // 4. Create Budget
-  const cycleBudget = payload.income / 3
+  const c1 = payload.cycle_1_budget !== undefined ? payload.cycle_1_budget : payload.income / 3;
+  const c2 = payload.cycle_2_budget !== undefined ? payload.cycle_2_budget : payload.income / 3;
+  const c3 = payload.cycle_3_budget !== undefined ? payload.cycle_3_budget : payload.income / 3;
   const { error: budgetError } = await supabase
     .from('budgets')
     .insert({
@@ -141,9 +146,9 @@ export async function setupFamilyBudget(payload: {
       year: payload.year,
       income: payload.income,
       currency: payload.currency,
-      cycle_1_budget: cycleBudget,
-      cycle_2_budget: cycleBudget,
-      cycle_3_budget: cycleBudget
+      cycle_1_budget: c1,
+      cycle_2_budget: c2,
+      cycle_3_budget: c3
     })
 
   if (budgetError) throw new Error('Failed to create budget: ' + budgetError.message)
@@ -209,6 +214,53 @@ export async function addExpense(payload: {
     user_id: user.id,
     action: 'ADDED_EXPENSE',
     details: { amount: payload.amount, category: payload.category, paid_by_name: profile.name }
+  })
+
+  revalidatePath('/')
+}
+
+export async function updateFamilyBudget(payload: {
+  budgetId: string
+  income: number
+  cycle_1_budget: number
+  cycle_2_budget: number
+  cycle_3_budget: number
+}) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  // Get user's profile to retrieve family_id
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('family_id, name')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const profile = profiles && profiles.length > 0 ? profiles[0] : null
+  if (!profile) throw new Error('Profile not found')
+
+  const { error } = await supabase
+    .from('budgets')
+    .update({
+      income: payload.income,
+      cycle_1_budget: payload.cycle_1_budget,
+      cycle_2_budget: payload.cycle_2_budget,
+      cycle_3_budget: payload.cycle_3_budget
+    })
+    .eq('id', payload.budgetId)
+    .eq('family_id', profile.family_id)
+
+  if (error) throw new Error('Failed to update budget: ' + error.message)
+
+  // Log action
+  await supabase.from('activity_logs').insert({
+    family_id: profile.family_id,
+    user_id: user.id,
+    action: 'UPDATE_BUDGET',
+    details: { income: payload.income, cycle_1: payload.cycle_1_budget, cycle_2: payload.cycle_2_budget, cycle_3: payload.cycle_3_budget }
   })
 
   revalidatePath('/')

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,10 +11,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  LogOut, Mic, MicOff, Languages, Check
+  LogOut, Mic, MicOff, Languages, Check, Settings
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { addExpense } from '@/app/actions';
+import { addExpense, updateFamilyBudget } from '@/app/actions';
 import { createClient } from '@/utils/supabase/client';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend
@@ -67,6 +67,12 @@ const translations = {
     saveExpense: "Save to Piggybank 🐷",
     markExtra: "This is a special surprise expense (Skip normal budget)",
     voicePlaceholder: "Tap Mic and say: 'spent 500 on Food'",
+    adjustBudgets: "Adjust Budgets ⚙️",
+    editBudgetDesc: "Adjust cycle budgets for this month.",
+    cycle1Label: "Cycle 1",
+    cycle2Label: "Cycle 2",
+    cycle3Label: "Cycle 3",
+    saveBudget: "Save Budgets 🐷",
     monthlySavings: "Monthly Savings",
     monthlySpent: "Spent this Month",
     monthlyIncome: "Monthly Income",
@@ -99,6 +105,12 @@ const translations = {
     saveExpense: "गुल्लक में डालें 🐷",
     markExtra: "यह एक विशेष अतिरिक्त खर्च है (बजट न घटाएं)",
     voicePlaceholder: "माइक दबाकर बोलें: 'भोजन पर 500 रुपये'",
+    adjustBudgets: "बजट बदलें ⚙️",
+    editBudgetDesc: "इस महीने के चक्र बजट को बदलें।",
+    cycle1Label: "चक्र 1",
+    cycle2Label: "चक्र 2",
+    cycle3Label: "चक्र 3",
+    saveBudget: "बजट बचाएं 🐷",
     monthlySavings: "मासिक बचत",
     monthlySpent: "इस महीने का खर्च",
     monthlyIncome: "मासिक आय",
@@ -131,6 +143,12 @@ const translations = {
     saveExpense: "ગલ્લાકમાં સાચવો 🐷",
     markExtra: "આ એક વિશેષ વધારાનો ખર્ચ છે",
     voicePlaceholder: "માઈક દબાવીને બોલો: 'ભોજન પર 500 રૂપિયા'",
+    adjustBudgets: "બજેટ બદલો ⚙️",
+    editBudgetDesc: "આ મહિના માટે ચક્ર બજેટ ગોઠવો.",
+    cycle1Label: "ચક્ર ૧",
+    cycle2Label: "ચક્ર ૨",
+    cycle3Label: "ચક્ર ૩",
+    saveBudget: "બજેટ સાચવો 🐷",
     monthlySavings: "માસિક બચત",
     monthlySpent: "આ મહિનાનો ખર્ચ",
     monthlyIncome: "માસિક આવક",
@@ -182,6 +200,40 @@ export default function Dashboard({ initialData }: DashboardProps) {
   const [paidBy, setPaidBy] = useState(profile?.id || '');
   const [selectedSplitMembers, setSelectedSplitMembers] = useState<string[]>(members.map(m => m.id));
   const [isExtraExpense, setIsExtraExpense] = useState(false);
+
+  // Edit Budget State
+  const [editBudgetOpen, setEditBudgetOpen] = useState(false);
+  const [editIncome, setEditIncome] = useState('');
+  const [editCycle1, setEditCycle1] = useState('');
+  const [editCycle2, setEditCycle2] = useState('');
+  const [editCycle3, setEditCycle3] = useState('');
+
+  const openEditBudget = () => {
+    setEditIncome(budget.income.toString());
+    setEditCycle1(budget.cycle_1_budget.toString());
+    setEditCycle2(budget.cycle_2_budget.toString());
+    setEditCycle3(budget.cycle_3_budget.toString());
+    setEditBudgetOpen(true);
+  };
+
+  const handleUpdateBudget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await updateFamilyBudget({
+        budgetId: budget.id,
+        income: parseFloat(editIncome) || 0,
+        cycle_1_budget: parseFloat(editCycle1) || 0,
+        cycle_2_budget: parseFloat(editCycle2) || 0,
+        cycle_3_budget: parseFloat(editCycle3) || 0
+      });
+      setEditBudgetOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -381,6 +433,10 @@ export default function Dashboard({ initialData }: DashboardProps) {
                 <SelectItem value="gu">GU</SelectItem>
               </SelectContent>
             </Select>
+
+            <Button variant="ghost" size="icon" onClick={openEditBudget} className="h-8 w-8 hover:bg-blue-50 hover:text-blue-500 rounded-xl">
+              <Settings className="w-4 h-4 text-zinc-500" />
+            </Button>
 
             <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 hover:bg-red-50 hover:text-red-500 rounded-xl">
               <LogOut className="w-4 h-4 text-zinc-500" />
@@ -761,6 +817,99 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
               <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base shadow-lg" disabled={loading}>
                 {loading ? 'Saving...' : t('saveExpense')}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Budget Dialog */}
+        <Dialog open={editBudgetOpen} onOpenChange={setEditBudgetOpen}>
+          <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-3xl p-6">
+            <DialogHeader className="border-b pb-2">
+              <DialogTitle className="text-lg font-bold">{t('adjustBudgets')}</DialogTitle>
+              <DialogDescription className="text-xs">{t('editBudgetDesc')}</DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleUpdateBudget} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="editIncome" className="text-xs font-bold text-zinc-500 uppercase">{t('totalBudget')}</Label>
+                <Input 
+                  id="editIncome" 
+                  type="number" 
+                  value={editIncome}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditIncome(val);
+                    const parsed = parseFloat(val) || 0;
+                    const split = (parsed / 3).toFixed(0);
+                    setEditCycle1(split);
+                    setEditCycle2(split);
+                    setEditCycle3((parsed - parseFloat(split)*2).toFixed(0));
+                  }}
+                  className="h-12 rounded-2xl font-black text-lg"
+                  required 
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="editCycle1" className="text-[10px] font-bold text-zinc-500 uppercase">{t('cycle1Label')}</Label>
+                  <Input 
+                    id="editCycle1" 
+                    type="number" 
+                    value={editCycle1}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditCycle1(v);
+                      const c1Val = parseFloat(v) || 0;
+                      const c2Val = parseFloat(editCycle2) || 0;
+                      const c3Val = parseFloat(editCycle3) || 0;
+                      setEditIncome((c1Val + c2Val + c3Val).toString());
+                    }}
+                    className="h-12 rounded-2xl font-bold text-sm text-center"
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editCycle2" className="text-[10px] font-bold text-zinc-500 uppercase">{t('cycle2Label')}</Label>
+                  <Input 
+                    id="editCycle2" 
+                    type="number" 
+                    value={editCycle2}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditCycle2(v);
+                      const c1Val = parseFloat(editCycle1) || 0;
+                      const c2Val = parseFloat(v) || 0;
+                      const c3Val = parseFloat(editCycle3) || 0;
+                      setEditIncome((c1Val + c2Val + c3Val).toString());
+                    }}
+                    className="h-12 rounded-2xl font-bold text-sm text-center"
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editCycle3" className="text-[10px] font-bold text-zinc-500 uppercase">{t('cycle3Label')}</Label>
+                  <Input 
+                    id="editCycle3" 
+                    type="number" 
+                    value={editCycle3}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditCycle3(v);
+                      const c1Val = parseFloat(editCycle1) || 0;
+                      const c2Val = parseFloat(editCycle2) || 0;
+                      const c3Val = parseFloat(v) || 0;
+                      setEditIncome((c1Val + c2Val + c3Val).toString());
+                    }}
+                    className="h-12 rounded-2xl font-bold text-sm text-center"
+                    required 
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base shadow-lg" disabled={loading}>
+                {loading ? 'Saving...' : t('saveBudget')}
               </Button>
             </form>
           </DialogContent>

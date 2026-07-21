@@ -22,6 +22,18 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [members, setMembers] = useState([{ id: 1, name: 'Admin' }]);
   const [loading, setLoading] = useState(false);
+  const [cycle1, setCycle1] = useState('');
+  const [cycle2, setCycle2] = useState('');
+  const [cycle3, setCycle3] = useState('');
+
+  const handleIncomeChange = (val: string) => {
+    setIncome(val);
+    const parsed = parseFloat(val) || 0;
+    const split = (parsed / 3).toFixed(0);
+    setCycle1(split);
+    setCycle2(split);
+    setCycle3((parsed - parseFloat(split)*2).toFixed(0));
+  };
 
   const handleNext = () => setStep(prev => prev + 1);
   const handleBack = () => setStep(prev => prev - 1);
@@ -47,7 +59,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         currency,
         month,
         year,
-        members: names
+        members: names,
+        cycle_1_budget: parseFloat(cycle1) || 0,
+        cycle_2_budget: parseFloat(cycle2) || 0,
+        cycle_3_budget: parseFloat(cycle3) || 0
       });
       onComplete();
     } catch (e) {
@@ -100,7 +115,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                       type="number" 
                       placeholder="24000" 
                       value={income}
-                      onChange={(e) => setIncome(e.target.value)}
+                      onChange={(e) => handleIncomeChange(e.target.value)}
                       className="flex-1"
                     />
                   </div>
@@ -188,15 +203,34 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 </div>
                 <h3 className="text-xl font-medium">All Set!</h3>
                 <p className="text-muted-foreground text-sm">
-                  Your budget of {currency}{income} is divided into 3 equal cycles of {currency}{(parseFloat(income)/3).toFixed(2)}.
+                  Customize the pocket money for each cycle if needed:
                 </p>
                 <div className="grid grid-cols-3 gap-2 mt-4 text-left">
-                  {[1, 2, 3].map(c => (
-                    <div key={c} className="bg-secondary p-3 rounded-lg flex flex-col items-center">
-                      <span className="text-xs text-muted-foreground">Cycle {c}</span>
-                      <span className="font-semibold text-primary">{currency}{(parseFloat(income)/3).toFixed(0)}</span>
-                    </div>
-                  ))}
+                  {[1, 2, 3].map(c => {
+                    const val = c === 1 ? cycle1 : c === 2 ? cycle2 : cycle3;
+                    const setVal = c === 1 ? setCycle1 : c === 2 ? setCycle2 : setCycle3;
+                    return (
+                      <div key={c} className="bg-secondary p-3 rounded-2xl flex flex-col gap-1 items-center">
+                        <span className="text-xs text-muted-foreground font-bold">Cycle {c}</span>
+                        <div className="flex items-center w-full">
+                          <span className="text-sm font-bold text-muted-foreground mr-0.5">{currency}</span>
+                          <Input 
+                            type="number"
+                            value={val}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setVal(v);
+                              const c1Val = c === 1 ? parseFloat(v) || 0 : parseFloat(cycle1) || 0;
+                              const c2Val = c === 2 ? parseFloat(v) || 0 : parseFloat(cycle2) || 0;
+                              const c3Val = c === 3 ? parseFloat(v) || 0 : parseFloat(cycle3) || 0;
+                              setIncome((c1Val + c2Val + c3Val).toString());
+                            }}
+                            className="h-8 p-1 text-center font-extrabold text-sm"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}

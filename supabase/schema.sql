@@ -95,6 +95,24 @@ CREATE POLICY "Users can view expenses" ON public.expenses
         SELECT family_id FROM public.profiles WHERE user_id = auth.uid()
     ));
 
+-- Users can view budgets in their family
+CREATE POLICY "Users can view budgets" ON public.budgets
+    FOR SELECT USING (family_id IN (
+        SELECT family_id FROM public.profiles WHERE user_id = auth.uid()
+    ));
+
+-- Users can insert budgets in their family
+CREATE POLICY "Users can insert budgets" ON public.budgets
+    FOR INSERT WITH CHECK (family_id IN (
+        SELECT family_id FROM public.profiles WHERE user_id = auth.uid()
+    ));
+
+-- Users can update budgets in their family
+CREATE POLICY "Users can update budgets" ON public.budgets
+    FOR UPDATE USING (family_id IN (
+        SELECT family_id FROM public.profiles WHERE user_id = auth.uid()
+    ));
+
 -- Add realtime to expenses
 ALTER PUBLICATION supabase_realtime ADD TABLE public.expenses;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.activity_logs;
