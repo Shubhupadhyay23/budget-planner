@@ -1,4 +1,4 @@
-const CACHE_NAME = 'budget-planner-cache-v1';
+const CACHE_NAME = 'budget-planner-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/login',
@@ -23,6 +23,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
+            console.log('Deleting old cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -32,37 +33,69 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event - Cache first / Network fallback
+// Fetch Event - Dynamic caching strategy
 self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip caching API/Supabase calls
-  if (event.request.url.includes('_next/webpack-hmr') || event.request.url.includes('supabase')) {
+  const url = event.request.url;
+
+  // Skip caching bundlers, dev hot reloading, and remote API/Supabase calls
+  if (
+    url.includes('_next/webpack-hmr') || 
+    url.includes('supabase') || 
+    url.includes('/_next/static/development') ||
+    url.includes('/api/')
+  ) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  const acceptHeader = event.request.headers.get('accept') || '';
+  const isPageRequest = acceptHeader.includes('text/html') || 
+                        url === self.location.origin || 
+                        url === self.location.origin + '/' || 
+                        url.includes('/login');
 
-      return fetch(event.request).then((response) => {
-        // Cache newly requested assets
-        if (response.status === 200 && event.request.url.startsWith(self.location.origin)) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+  if (isPageRequest) {
+    // Network-First for HTML/Pages to always show latest changes
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.status === 200 && url.startsWith(self.location.origin)) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            return caches.match('/');
           });
-        }
-        return response;
-      }).catch(() => {
-        // Offline Fallback for html pages
-        if (event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('/');
-        }
-      });
-    })
-  );
+        })
+    );
+  } else {
+    // Stale-While-Revalidate for other static assets
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse.status === 200 && url.startsWith(self.location.origin)) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+            }
+            return networkResponse;
+          })
+          .catch(() => {
+            // Ignore network errors for background cache updates
+          });
+
+        return cachedResponse || fetchPromise;
+      })
+    );
+  }
 });

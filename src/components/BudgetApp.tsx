@@ -89,6 +89,21 @@ export default function BudgetApp({ initialData }: BudgetAppProps) {
         navigator.serviceWorker.register('/sw.js').then(
           (registration) => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            
+            // Auto reload when a new service worker takes control (update found)
+            registration.onupdatefound = () => {
+              const installingWorker = registration.installing;
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                      console.log('New PWA service worker version installed. Reloading...');
+                      window.location.reload();
+                    }
+                  }
+                };
+              }
+            };
           },
           (err) => {
             console.log('ServiceWorker registration failed: ', err);
